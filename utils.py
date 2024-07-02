@@ -4,12 +4,12 @@ from config import *
 def get_square(row, col):
     return chess.square(col, 7 - row)
 
-def get_piece(board, row, col):
-    if 0 <= row < 8 and 0 <= col < 8:
-        piece = board.piece_at(get_square(row, col))
-        return piece
-    else:
-        raise ValueError("Row and column must be in the range 0-7 inclusive.")
+# def get_piece(board, row, col):
+#     if 0 <= row < 8 and 0 <= col < 8:
+#         piece = board.piece_at(get_square(row, col))
+#         return piece
+#     else:
+#         raise ValueError("Row and column must be in the range 0-7 inclusive.")
     
 def get_piece_moves(board, row, col):
     legal_moves = list(board.legal_moves)
@@ -40,12 +40,34 @@ def handle_click(board, x, y):
     if row == -1 or col == -1:
         return None, None
     
-    piece = get_piece(board, row, col)
+    # piece = get_piece(board, row, col)
     
-    # check if no piece is found
-    if not piece:
-        return None, get_square(row, col)
+    # # check if no piece is found
+    # if not piece:
+    #     return None, get_square(row, col)
     
-    print(piece, 'White' if piece.color else 'Black')
+    # print(piece, 'White' if piece.color else 'Black')
     
     return get_piece_moves(board, row, col), get_square(row, col)
+
+def check_game_over(board):
+    game_over = False
+    result_text = ''
+    
+    if board.is_checkmate():
+        game_over = True
+        result_text = "Black wins by checkmate!" if board.turn else "White wins by checkmate!"
+    elif board.is_stalemate():
+        game_over = True
+        result_text = "Stalemate!"
+    elif board.is_insufficient_material():
+        game_over = True
+        result_text = "Draw by insufficient material!"
+    elif board.is_seventyfive_moves():
+        game_over = True
+        result_text = "Draw by 75-move rule!"
+    elif board.is_fivefold_repetition():
+        game_over = True
+        result_text = "Draw by fivefold repetition!"
+        
+    return game_over, result_text
