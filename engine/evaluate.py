@@ -3,12 +3,12 @@ import chess.pgn
 
 # Define the piece values
 piece_values = {
-    chess.PAWN: 1,
-    chess.KNIGHT: 3,
-    chess.BISHOP: 3,
-    chess.ROOK: 5,
-    chess.QUEEN: 9,
-    chess.KING: 0  # Kings are not counted in material value
+    chess.PAWN: 100,
+    chess.KNIGHT: 300,
+    chess.BISHOP: 300,
+    chess.ROOK: 500,
+    chess.QUEEN: 900,
+    chess.KING: 10000  # Kings are not counted in material value
 }
 
 def evaluate_board(board):

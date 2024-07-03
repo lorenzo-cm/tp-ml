@@ -12,13 +12,16 @@ def main():
     running = True
     game_over = False
     result_text = ''
+    
     zobrist_table = initialize_zobrist()
+    transposition_table = {}
     
     list_moves = []
     prev_selected_square = None
     
     board = chess.Board()
-    # board.set_fen('4kbnr/P3pppp/8/8/8/8/1PPPPPPP/RNBQKBNR w - - 0 1')
+    # board.set_fen('4k3/8/2pr1p1p/1p4p1/3PK3/1NP2NP1/8/8 w - - 0 1')
+    board.set_fen('4k3/8/7p/3r1NpK/6P1/8/8/8 w - - 0 1')
     
     with ProcessPoolExecutor() as executor:
         future = None
@@ -41,8 +44,6 @@ def main():
                             if board.is_legal(move):
                                 board.push(move)
                                 
-                                print(compute_zobrist_hash(board, zobrist_table))
-                                
                         prev_selected_square = selected_square
 
             if not game_over:
@@ -50,11 +51,12 @@ def main():
 
             if not board.turn and not game_over:
                 if future is None:
-                    future = executor.submit(get_best_move, board, 5, zobrist_table)
+                    future = executor.submit(get_best_move, board, 4, zobrist_table, transposition_table)
                 elif future.done():
-                    move = future.result()
+                    move, transposition_table2 = future.result()
                     board.push(move)
                     future = None
+                    transposition_table = transposition_table2
 
             draw.all(board, list_moves)
 
