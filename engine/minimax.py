@@ -2,7 +2,7 @@ from .evaluate import evaluate_board
 from .zobrist import compute_zobrist_hash
 
 def get_best_move(board, depth, zobrist_table, transposition_table):
-    # positions, zobrist, collisions
+    # positions, zobrist, collisions, len_table
     count = [0, 0, 0]
     best_move = None
 

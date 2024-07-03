@@ -71,3 +71,10 @@ def check_game_over(board):
         result_text = "Draw by fivefold repetition!"
         
     return game_over, result_text
+
+def opening_move(number_moves):
+    print(number_moves)
+    if number_moves == 1:
+        return chess.Move.from_uci('e7e5')
+    if number_moves == 2:
+        return chess.Move.from_uci('b8c6')
