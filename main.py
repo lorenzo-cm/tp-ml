@@ -3,7 +3,7 @@ import pygame
 import chess
 from pygame_functions.draw import Draw
 from engine.minimax import get_best_move
-from engine.zobrist import initialize_zobrist, compute_zobrist_hash
+from engine.zobrist import ZobristHasher, ZobristHasherPoly
 from utils import *
 
 draw = Draw()
@@ -13,15 +13,23 @@ def main():
     game_over = False
     result_text = ''
     
-    zobrist_table = initialize_zobrist()
+    zobrist = ZobristHasherPoly()
+    # zobrist = ZobristHasher()
     transposition_table = {}
     
+    position_value = 0
+    
     list_moves = []
-    prev_selected_square = None
     
     board = chess.Board()
     # board.set_fen('4k3/8/2pr1p1p/1p4p1/3PK3/1NP2NP1/8/8 w - - 0 1')
-    # board.set_fen('4k3/8/7p/3r1NpK/6P1/8/8/8 w - - 0 1')
+    # board.set_fen('8/8/8/8/3k4/8/3q4/K7 w - - 0 1') # easy final
+    # board.fullmove_number = 70
+    
+    INITIAL_MOVES = True
+    
+    prev_selected_square = None
+    selected_square = None
     
     with ProcessPoolExecutor() as executor:
         future = None
@@ -31,40 +39,55 @@ def main():
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.MOUSEBUTTONDOWN and not game_over:
+                    
                     if board.turn:
                         list_moves, selected_square = handle_click(board, *event.pos)
+                        
+                        print(prev_selected_square, selected_square)
+                        
                         if prev_selected_square is not None and selected_square is not None:
-                            move = chess.Move(prev_selected_square, selected_square)
-                            move_promo = chess.Move(move.from_square, move.to_square, promotion=chess.QUEEN)
                             
-                            if board.is_legal(move_promo):
-                                piece = draw.draw_promotion()
-                                move = chess.Move(move.from_square, move.to_square, promotion=piece)
+                            if board.piece_at(prev_selected_square):
+
+                                move = chess.Move(prev_selected_square, selected_square)
+                                move_promo = chess.Move(move.from_square, move.to_square, promotion=chess.QUEEN)
                                 
-                            if board.is_legal(move):
-                                board.push(move)
-                                
-                        prev_selected_square = selected_square
+                                if board.is_legal(move_promo):
+                                    piece = draw.draw_promotion()
+                                    move = chess.Move(move.from_square, move.to_square, promotion=piece)
+
+                                if board.is_legal(move):
+                                    if move:
+                                        board.push(move)
+                                    else:
+                                        print(f'move wrong: {move}')
+                                    print('number moves: ', board.fullmove_number)
+                    
+                    print(f'prev square: {prev_selected_square},  selected: {selected_square}')
+                    prev_selected_square = selected_square
+                    print(f'prev square: {prev_selected_square},  selected: {selected_square}')
+                    
 
             if not game_over:
                 game_over, result_text = check_game_over(board)
 
 
             if not board.turn and not game_over:
-                if board.fullmove_number < 3:
+                if board.fullmove_number < 3 and INITIAL_MOVES:
                     move = opening_move(board.fullmove_number)
-                    # print(move)
                     if board.is_legal(move):
                         board.push(move)
                     
                 else:
                     if future is None:
-                        future = executor.submit(get_best_move, board, 4, zobrist_table, transposition_table)
+                        future = executor.submit(get_best_move, board.copy(), 4, zobrist, transposition_table, verbose=False)
+                        
                     elif future.done():
-                        move, transposition_table2 = future.result()
-                        board.push(move)
+                        move, position_value, transposition_table = future.result()
+                        if move:
+                            board.push(move)
+                        print(f"Evaluation: {position_value}")
                         future = None
-                        transposition_table = transposition_table2
 
             draw.all(board, list_moves)
 
