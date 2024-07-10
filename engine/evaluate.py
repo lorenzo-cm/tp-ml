@@ -205,25 +205,25 @@ def king_winning_goes_to_combat(board: chess.Board, current_score, weight=1.5, t
     return score
 
 
-def evaluate_board_stockfish(board):
-    stockfish_path = "./stockfish/stockfish-ubuntu-x86-64-avx2"
-    with chess.engine.SimpleEngine.popen_uci(stockfish_path) as engine:
-        # Get the evaluation from Stockfish
-        info = engine.analyse(board, chess.engine.Limit(time=0.08))
+# def evaluate_board_stockfish(board):
+#     stockfish_path = "./stockfish/stockfish-ubuntu-x86-64-avx2"
+#     with chess.engine.SimpleEngine.popen_uci(stockfish_path) as engine:
+#         # Get the evaluation from Stockfish
+#         info = engine.analyse(board, chess.engine.Limit(time=0.08))
 
-        # Extract the score
-        score = info["score"].relative
+#         # Extract the score
+#         score = info["score"].relative
 
-        # Convert the score to centipawns or a mate in n
-        if score.is_mate():
-            mate_in = info["score"].pov(1).mate()
-            mate_centipaws = None
-            if mate_in > 0 :
-                mate_centipaws = 120 - np.log2(np.abs(mate_in)**3.5)
-            else:
-                mate_centipaws = -120 + np.log2(np.abs(mate_in)**3.5)
+#         # Convert the score to centipawns or a mate in n
+#         if score.is_mate():
+#             mate_in = info["score"].pov(1).mate()
+#             mate_centipaws = None
+#             if mate_in > 0 :
+#                 mate_centipaws = 120 - np.log2(np.abs(mate_in)**3.5)
+#             else:
+#                 mate_centipaws = -120 + np.log2(np.abs(mate_in)**3.5)
                 
-            return mate_centipaws
-        else:
-            centipawns = score.score()
-            return float(centipawns)
+#             return mate_centipaws
+#         else:
+#             centipawns = score.score()
+#             return float(centipawns)

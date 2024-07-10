@@ -40,14 +40,6 @@ def handle_click(board, x, y):
     if row == -1 or col == -1:
         return None, None
     
-    # piece = get_piece(board, row, col)
-    
-    # # check if no piece is found
-    # if not piece:
-    #     return None, get_square(row, col)
-    
-    # print(piece, 'White' if piece.color else 'Black')
-    
     return get_piece_moves(board, row, col), get_square(row, col)
 
 def check_game_over(board):

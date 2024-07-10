@@ -1,9 +1,17 @@
+# vscode generated
 __pycache__
+.vscode
 
+# test jupyters
 test.ipynb
 
 # data files
-data
+data/
 *.pgn
+*.h5
 
+# stockfish folder
 stockfish
+
+# models
+*.pth
