@@ -1,19 +1,22 @@
 import chess
 import chess.pgn
 import numpy as np
-from .utils_engine import *
 
-def evaluate_board(board: chess.Board):    
+from .utils_engine import *
+from .nn_eval import model_eval
+
+
+def evaluate_board(board: chess.Board, model):    
     
     initial_turn = board.turn
     
     if board.is_checkmate():
-        print('checkmate')
         return -np.inf if board.turn else np.inf
     
     if board.is_stalemate():
         return 0
     
+    # MOBILITY SCORE
     board.turn = chess.WHITE
     mobility_w = len(list(board.legal_moves))
     
@@ -24,6 +27,8 @@ def evaluate_board(board: chess.Board):
     
     mobility_score = weights['mobility'] * (mobility_w - mobility_b)
     
+    
+    #  MATERIAL SCORE AND SQUARES ATTACKED SCORE
     white_material = 0
     black_material = 0
     
@@ -50,21 +55,30 @@ def evaluate_board(board: chess.Board):
     
     material_score = white_material - black_material
     
+    # ENDGAME SCORE
     endgame_score = 0
     if board.fullmove_number >= 30:
-        endgame_score = endgame_score_bonus(board)
+        endgame_score = endgame_score_bonus(board) * weights['endgame']
     
+    # PASSED PAWN SCORE
     pawn_score = 0
-    if board.fullmove_number >= 20:
-        pawn_score = passed_pawn_score(board)
-            
+    if board.fullmove_number >= 0:
+        pawn_score = passed_pawn_score(board) * weights['passed_pawn']
+
+    # NN MODEL SCORE
+    model_score = model_eval(model, board) * weights['nn_model']
+    
+    # CAN BE CAPTURED SCORE
+    can_be_captured_score = can_be_captured_score_func(board) * weights['can_be_captured']
+    
     # print('Material ', material_score)
     # print('Attack squares ', count_attack_squares_score)
     # print('Mobility ', mobility_score)
     # print('Endgame score: ', endgame_score)
-    # print('pawn score: ', pawn_score)
+    # print('Pawn score: ', pawn_score)
+    # print('Model score: ', model_score)
     
-    score = material_score + count_attack_squares_score + mobility_score + endgame_score + pawn_score
+    score = material_score + count_attack_squares_score + mobility_score + endgame_score + pawn_score + model_score + can_be_captured_score
 
     return score
 
@@ -79,10 +93,21 @@ weights = {
     chess.KING: 200,
     'mobility': 0.045,
     'qnt_attack_squares': 0.075,
+    'endgame': 2,
+    'passed_pawn':0.5,
+    'nn_model': 0.6,
+    'can_be_captured': 0.1,
 }
 
 
-def endgame_score_bonus(board: chess.Board, weight=2.25):
+def endgame_score_bonus(board: chess.Board):
+    """Calculates the king danger and then converts to score
+    
+    King danger is calculated by the distance of the weighted pieces to the king
+    
+    Then the score is generated calculating the difference between the
+    white king and black king danger and scaled for a factor weight
+    """
     initial_turn = board.turn
     
     piece2square = piece2squareDICT(board)
@@ -128,7 +153,7 @@ def endgame_score_bonus(board: chess.Board, weight=2.25):
     else:
         score = (ally_king_danger_score - enemy_king_danger_score)
                 
-    return score * weight
+    return score
     
     
 def passed_pawn_score(board: chess.Board):
@@ -176,54 +201,86 @@ def passed_pawn_score(board: chess.Board):
     return score
 
 
-def king_winning_goes_to_combat(board: chess.Board, current_score, weight=1.5, threshold=15):
-    """
-    Evaluate the board giving a higher score if the king moves towards the other king,
-    but only if one side is significantly winning.
+def can_be_captured_score_func(board):
+    """Creates a score based on the pieces attacked
+    
+    It computes a danger score for each player, which is basically
+    the weighted product of:
+    - piece weight
+    - number of attackers
+    - boolean if the piece is attacked
+    
+    # Main idea: Prevent blunders
     """
     initial_turn = board.turn
+    
+    ally_pieces_count = 0
+    enemy_pieces_count = 0
+    
+    ally_danger = 0
+    enemy_danger = 0
+    
+    # verify_dict = {}
+    for square, piece in board.piece_map().items():
+        
+        if piece.piece_type == chess.KING:
+            continue
+        
+        if board.is_attacked_by(not piece.color, square):
+            
+            attackers = board.attackers(not piece.color, square)
+            num_attackers = len(attackers)
+            
+            if piece.color == initial_turn:
+                ally_pieces_count += 1
+                ally_danger += (weights[piece.piece_type]**1.5) * num_attackers
+                # verify_dict[f'{square}-{piece}-{piece.color}-{piece.piece_type}'] = (weights[piece.piece_type]**1.5) * num_attackers
 
-    # Check if one side is significantly winning
-    if abs(current_score) < threshold:
-        return 0
+            else:
+                enemy_pieces_count += 1
+                enemy_danger += (weights[piece.piece_type]**1.5) * num_attackers
+                # verify_dict[f'{square}-{piece}-{piece.color}-{piece.piece_type}'] = (weights[piece.piece_type]**1.5) * num_attackers
+    
 
-    piece2square = piece2squareDICT(board)
+    ally_danger /= ally_pieces_count + 0.00031247533457532
+    enemy_danger /= enemy_pieces_count + 0.00031247533457532
     
-    ally_king_square = piece2square[chess.Piece(chess.KING, initial_turn)][0]
-    enemy_king_square = piece2square[chess.Piece(chess.KING, not initial_turn)][0]
+    score = 0
     
-    # Calculate the distance between the two kings
-    king_distance = chess.square_distance(ally_king_square, enemy_king_square)
+    if initial_turn:
+        score = -(ally_danger - enemy_danger)
+        
+    else:
+        score = (ally_danger - enemy_danger)
     
-    # Reward closer distances
-    score = (8 - king_distance) * weight
-    
-    # If the current side is losing, negate the score
-    if (score < 0 and initial_turn) or (score > 0 and not initial_turn):
-        score = -score
-
+    # print(verify_dict)
     return score
 
 
-# def evaluate_board_stockfish(board):
-#     stockfish_path = "./stockfish/stockfish-ubuntu-x86-64-avx2"
-#     with chess.engine.SimpleEngine.popen_uci(stockfish_path) as engine:
-#         # Get the evaluation from Stockfish
-#         info = engine.analyse(board, chess.engine.Limit(time=0.08))
+# def king_winning_goes_to_combat(board: chess.Board, current_score, weight=1.5, threshold=15):
+#     """
+#     Evaluate the board giving a higher score if the king moves towards the other king,
+#     but only if one side is significantly winning.
+#     """
+#     initial_turn = board.turn
 
-#         # Extract the score
-#         score = info["score"].relative
+#     # Check if one side is significantly winning
+#     if abs(current_score) < threshold:
+#         return 0
 
-#         # Convert the score to centipawns or a mate in n
-#         if score.is_mate():
-#             mate_in = info["score"].pov(1).mate()
-#             mate_centipaws = None
-#             if mate_in > 0 :
-#                 mate_centipaws = 120 - np.log2(np.abs(mate_in)**3.5)
-#             else:
-#                 mate_centipaws = -120 + np.log2(np.abs(mate_in)**3.5)
-                
-#             return mate_centipaws
-#         else:
-#             centipawns = score.score()
-#             return float(centipawns)
+#     piece2square = piece2squareDICT(board)
+    
+#     ally_king_square = piece2square[chess.Piece(chess.KING, initial_turn)][0]
+#     enemy_king_square = piece2square[chess.Piece(chess.KING, not initial_turn)][0]
+    
+#     # Calculate the distance between the two kings
+#     king_distance = chess.square_distance(ally_king_square, enemy_king_square)
+    
+#     # Reward closer distances
+#     score = (8 - king_distance) * weight
+    
+#     # If the current side is losing, negate the score
+#     if (score < 0 and initial_turn) or (score > 0 and not initial_turn):
+#         score = -score
+
+#     return score

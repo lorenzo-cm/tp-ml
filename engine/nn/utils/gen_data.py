@@ -3,10 +3,10 @@ import numpy as np
 from feature_extract import *
 from random_board import generate_random_board
 
-stockfish = initialize_stockfish("../../stockfish/stockfish-ubuntu-x86-64-avx2")
+stockfish = initialize_stockfish("../../../stockfish/stockfish-ubuntu-x86-64-avx2")
 
 num_samples = 10000
-file_name = 'SAMPLE.h5'
+file_name = 'chess_data3.h5'
 
 features = []
 labels = []

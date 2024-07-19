@@ -11,11 +11,10 @@ from train import train_model
 
 train_loader, valid_loader = split_dataset()
 
-
 model = ChessModel()
 criterion = nn.MSELoss()
 optimizer = Adam(model.parameters(), lr=1e-4)
 
 trained_model = train_model(model, train_loader, valid_loader, criterion, optimizer)
 
-torch.save(trained_model, 'model/model_SAMPLE.pth')
+torch.save(trained_model.state_dict(), 'models/model_SAMPLE.pth')

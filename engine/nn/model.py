@@ -9,7 +9,13 @@ class ChessModel(nn.Module):
         
         self.positional_encoding = PositionalEncoding(d_model, dropout)
         
-        encoder_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, dim_feedforward=dim_feedforward, dropout=dropout)
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=d_model, 
+            nhead=nhead, 
+            dim_feedforward=dim_feedforward, 
+            dropout=dropout,
+            batch_first=True
+        )
         self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_encoder_layers)
         
         self.fc1 = nn.Linear(d_model * 8 * 8, 1024)
@@ -19,13 +25,13 @@ class ChessModel(nn.Module):
     def forward(self, x):
         x = torch.relu(self.bn1(self.conv1(x)))  # (batch_size, d_model, 8, 8)
         
-        x = x.flatten(2).permute(2, 0, 1)  # (batch_size, d_model, 8*8) -> (8*8, batch_size, d_model)
+        x = x.flatten(2).permute(0, 2, 1)  # (batch_size, d_model, 8*8) -> (batch_size, 8*8, d_model)
         
         x = self.positional_encoding(x)
         
-        x = self.transformer_encoder(x)  # (8*8, batch_size, d_model)
+        x = self.transformer_encoder(x)  # (batch_size, 8*8, d_model)
         
-        x = x.permute(1, 0, 2).contiguous().view(x.size(1), -1)  # (8*8, batch_size, d_model) -> (batch_size, 8*8*d_model)
+        x = x.contiguous().view(x.size(0), -1)  # (batch_size, 8*8*d_model)
         
         x = torch.relu(self.fc1(x))
         x = self.dropout(x)
@@ -43,9 +49,9 @@ class PositionalEncoding(nn.Module):
         div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-torch.log(torch.tensor(10000.0)) / d_model))
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
-        pe = pe.unsqueeze(1)
+        pe = pe.unsqueeze(0)
         self.register_buffer('pe', pe)
 
     def forward(self, x):
-        x = x + self.pe[:x.size(0), :]
+        x = x + self.pe[:, :x.size(1), :]
         return self.dropout(x)

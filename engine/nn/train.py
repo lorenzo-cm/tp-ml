@@ -1,7 +1,10 @@
 import torch
 from tqdm import tqdm
 
-def train_model(model, train_loader, valid_loader, criterion, optimizer, num_epochs=75, patience=10, device='cuda'):
+def train_model(model, train_loader, valid_loader, criterion, optimizer, num_epochs=75, patience=10):
+    
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
     best_loss = float('inf')
     patience_counter = 0
     model.to(device)

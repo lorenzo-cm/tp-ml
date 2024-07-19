@@ -6,6 +6,7 @@ def initialize_stockfish(path):
     stockfish = Stockfish(path)
     stockfish.set_skill_level(20)
     stockfish.set_depth(20)
+    return stockfish
 
 def get_position_score(stockfish, board: chess.Board) -> dict:
     

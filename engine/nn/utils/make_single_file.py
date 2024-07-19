@@ -1,7 +1,7 @@
 import h5py
 import numpy as np
 
-input_files = ['../data/chess_dataset.h5', '../data/chess_dataset2.h5', '../data/achess_dataset3.h5']
+input_files = ['../data/chess_data1.h5', '../data/chess_data2.h5', '../data/chess_data3.h5']
 
 output_file = '../data/merged_chess_dataset.h5'
 
