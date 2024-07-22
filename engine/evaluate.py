@@ -71,12 +71,13 @@ def evaluate_board(board: chess.Board, model):
     # CAN BE CAPTURED SCORE
     can_be_captured_score = can_be_captured_score_func(board) * weights['can_be_captured']
     
-    # print('Material ', material_score)
-    # print('Attack squares ', count_attack_squares_score)
-    # print('Mobility ', mobility_score)
-    # print('Endgame score: ', endgame_score)
-    # print('Pawn score: ', pawn_score)
-    # print('Model score: ', model_score)
+    print('Material ', material_score)
+    print('Attack squares ', count_attack_squares_score)
+    print('Mobility ', mobility_score)
+    print('Endgame score: ', endgame_score)
+    print('Pawn score: ', pawn_score)
+    print('Model score: ', model_score)
+    print('Can be captured: ', can_be_captured_score)
     
     score = material_score + count_attack_squares_score + mobility_score + endgame_score + pawn_score + model_score + can_be_captured_score
 
@@ -94,9 +95,9 @@ weights = {
     'mobility': 0.045,
     'qnt_attack_squares': 0.075,
     'endgame': 2,
-    'passed_pawn':0.5,
-    'nn_model': 0.6,
-    'can_be_captured': 0.1,
+    'passed_pawn':0.3,
+    'nn_model': 0.45,
+    'can_be_captured': 0.09,
 }
 
 
@@ -215,7 +216,7 @@ def can_be_captured_score_func(board):
     initial_turn = board.turn
     
     ally_pieces_count = 0
-    enemy_pieces_count = 0
+    # enemy_pieces_count = 0
     
     ally_danger = 0
     enemy_danger = 0
@@ -236,22 +237,22 @@ def can_be_captured_score_func(board):
                 ally_danger += (weights[piece.piece_type]**1.5) * num_attackers
                 # verify_dict[f'{square}-{piece}-{piece.color}-{piece.piece_type}'] = (weights[piece.piece_type]**1.5) * num_attackers
 
-            else:
-                enemy_pieces_count += 1
-                enemy_danger += (weights[piece.piece_type]**1.5) * num_attackers
+            # else:
+                # enemy_pieces_count += 1
+                # enemy_danger += (weights[piece.piece_type]**1.5) * num_attackers
                 # verify_dict[f'{square}-{piece}-{piece.color}-{piece.piece_type}'] = (weights[piece.piece_type]**1.5) * num_attackers
     
 
     ally_danger /= ally_pieces_count + 0.00031247533457532
-    enemy_danger /= enemy_pieces_count + 0.00031247533457532
+    # enemy_danger /= enemy_pieces_count + 0.00031247533457532
     
     score = 0
     
     if initial_turn:
-        score = -(ally_danger - enemy_danger)
+        score = (ally_danger - enemy_danger)
         
     else:
-        score = (ally_danger - enemy_danger)
+        score = -(ally_danger - enemy_danger)
     
     # print(verify_dict)
     return score
